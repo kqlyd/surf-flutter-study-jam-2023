@@ -18,7 +18,8 @@ class TicketController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    urlController = TextEditingController();
+    urlController = TextEditingController(
+        text: 'https://journal-free.ru/download/za-rulem-12-dekabr-2019-rossiia.pdf');
   }
 
   bool isAddingUrlCorrect = false;
@@ -26,65 +27,128 @@ class TicketController extends GetxController {
   void addTicketByUrl() {
     ticketList.add(
       TicketModel(
-        title: 'Ticket',
+        title: 'Ticket ${ticketList.length + 1}',
         url: urlController.text,
-        downloadStatus: TicketDownloadStatus(),
+        downloadStatus: TicketDownloadStatus.initial(),
       ),
     );
+    print('object');
   }
 
-  void downloadTicket(TicketModel ticket, int ticketIndex) {
-    downloadFile(dio, ticket, ticketIndex);
-  }
-
-  Future downloadFile(Dio dio, TicketModel ticket, int ticketIndex) async {
-    try {
-      Response response = await dio.get(
-        ticket.url ?? '',
-        onReceiveProgress: (count, total) {
-          showDownloadProgress(count, total, ticket, ticketIndex);
-        },
-        //Received data with List<int>
-        options: Options(
-          responseType: ResponseType.bytes,
-          followRedirects: false,
-          validateStatus: (status) {
-            return status! < 500;
-          },
+  void downloadTicket({required int ticketIndex}) {
+    var ticket = ticketList[ticketIndex];
+    if (ticket.downloadStatus?.downloadStatus == TicketDownloadStatusEnum.waiting) {
+      downloadFile(dio: dio, ticketIndex: ticketIndex);
+    } else if (ticket.downloadStatus?.downloadStatus == TicketDownloadStatusEnum.pause) {
+      downloadFile(dio: dio, ticketIndex: ticketIndex, isResumed: true);
+    } else if (ticket.downloadStatus?.downloadStatus == TicketDownloadStatusEnum.loading) {
+      ticket.downloadStatus?.cancelToken?.cancel('Pause');
+      ticket = ticket.copyWith(
+        downloadStatus: ticket.downloadStatus?.copyWith(
+          downloadStatus: TicketDownloadStatusEnum.pause,
+          cancelToken: CancelToken(),
         ),
       );
+      ticketList[ticketIndex] = ticket;
+    }
+  }
 
-      var tempDir = await getTemporaryDirectory();
-      String fullPath = "${tempDir.path}/boo2.pdf'";
-      File file = File(fullPath);
-      var raf = file.openSync(mode: FileMode.write);
-      // response.data is List<int> type
-      raf.writeFromSync(response.data);
-      await raf.close();
+  void mergeFilesAfterPause(
+    String fullPath,
+    String tempPath,
+  ) async {
+    File pdfFile = File(fullPath);
+    File tempPdfFile = File(tempPath);
+    if (!(await pdfFile.exists())) {
+      pdfFile.create();
+    }
+
+    var ioSink = pdfFile.openWrite(mode: FileMode.writeOnlyAppend);
+    await ioSink.addStream(tempPdfFile.openRead());
+    await tempPdfFile.delete();
+  }
+
+  Future downloadFile({required Dio dio, required int ticketIndex, bool isResumed = false}) async {
+    Directory tempDir;
+    String fullPath = '';
+    String tempPath = '';
+    try {
+      var ticket = ticketList[ticketIndex];
+      tempDir = await getTemporaryDirectory();
+      fullPath = "${tempDir.path}/${ticket.title}.pdf";
+      tempPath = "${tempDir.path}/${ticket.title}_temp.pdf";
+      // }
+      await dio.download(
+        ticket.url ?? '',
+        tempPath,
+        deleteOnError: false,
+        cancelToken: ticket.downloadStatus?.cancelToken,
+        onReceiveProgress: (count, total) {
+          if (isResumed) {
+            showResumeProgress(count, total, ticket, ticketIndex);
+          } else {
+            showDownloadProgress(count, total, ticket, ticketIndex);
+          }
+        },
+        options: Options(
+          headers: getHeadersDownloadFile(ticket),
+        ),
+      );
     } catch (e) {
       print(e);
+    }
+    mergeFilesAfterPause(fullPath, tempPath);
+  }
+
+  Map<String, dynamic>? getHeadersDownloadFile(TicketModel ticket) {
+    if (ticket.downloadStatus?.currentReceived != null) {
+      return {
+        'range':
+            'bytes=${ticket.downloadStatus?.currentReceived}-${ticket.downloadStatus?.totalSize}'
+      };
+    } else {
+      return null;
+    }
+  }
+
+  void showResumeProgress(int received, int total, TicketModel ticket, int ticketIndex) {
+    if (total != -1) {
+      TicketDownloadStatusEnum newStatus;
+      if (received / total == 1) {
+        newStatus = TicketDownloadStatusEnum.finished;
+      } else {
+        newStatus = TicketDownloadStatusEnum.loading;
+      }
+      ticket = ticket.copyWith(
+        downloadStatus: ticket.downloadStatus?.copyWith(
+          currentReceived: received,
+          totalReceived: (ticket.downloadStatus?.totalReceived ?? 0) + received,
+          currentSize: total,
+          totalSize: ticket.downloadStatus?.totalSize,
+          downloadStatus: newStatus,
+        ),
+      );
+      ticketList[ticketIndex] = ticket;
     }
   }
 
   void showDownloadProgress(int received, int total, TicketModel ticket, int ticketIndex) {
     if (total != -1) {
+      TicketDownloadStatusEnum newStatus;
       if (received / total == 1) {
-        ticket = ticket.copyWith(
-          downloadStatus: TicketDownloadStatus(
-            received: received,
-            total: total,
-            downloadStatus: TicketDownloadStatusEnum.finished,
-          ),
-        );
+        newStatus = TicketDownloadStatusEnum.finished;
       } else {
-        ticket = ticket.copyWith(
-          downloadStatus: TicketDownloadStatus(
-            received: received,
-            total: total,
-            downloadStatus: TicketDownloadStatusEnum.loading,
-          ),
-        );
+        newStatus = TicketDownloadStatusEnum.loading;
       }
+      ticket = ticket.copyWith(
+        downloadStatus: ticket.downloadStatus?.copyWith(
+          currentReceived: received,
+          totalReceived: received,
+          currentSize: received,
+          totalSize: total,
+          downloadStatus: newStatus,
+        ),
+      );
       ticketList[ticketIndex] = ticket;
     }
   }

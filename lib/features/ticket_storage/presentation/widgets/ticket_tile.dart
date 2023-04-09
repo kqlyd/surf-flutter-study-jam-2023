@@ -23,7 +23,7 @@ class TicketTileWidget extends StatelessWidget {
           const Icon(
             Icons.airplane_ticket_outlined,
             color: Colors.grey,
-            size: 24,
+            size: 28,
           ),
           const SizedBox(width: 20),
           Expanded(
@@ -46,20 +46,22 @@ class TicketTileWidget extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   controller.ticketList[ticketIndex].downloadStatus?.getStatusTitle() ?? '',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(color: Colors.grey, fontSize: 14),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 20),
           IconButton(
             onPressed: () {
-              controller.downloadTicket(ticket, ticketIndex);
+              controller.downloadTicket(ticketIndex: ticketIndex);
             },
-            icon: const Icon(
-              Icons.cloud_download_outlined,
-              color: Colors.grey,
-              size: 24,
+            icon: Icon(
+              ticket.downloadStatus?.downloadStatus?.getIconStatus(),
+              color: Colors.deepPurple,
+              size: 28,
             ),
           ),
         ],
