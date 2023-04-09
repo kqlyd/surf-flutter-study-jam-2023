@@ -14,67 +14,84 @@ class TicketStoragePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Хранения билетов'),
       ),
-      floatingActionButton: TextButton(
-        onPressed: () {
-          showModalBottomSheet(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            context: context,
-            builder: (context) {
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: Get.find<TicketController>().urlController,
-                      decoration: InputDecoration(
-                        labelText: 'Введите url',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      style: ButtonStyle(
-                        shape: MaterialStatePropertyAll(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(32),
-                          ),
-                        ),
-                        backgroundColor: const MaterialStatePropertyAll(
-                          Color.fromRGBO(99, 81, 159, 1),
-                        ),
-                        foregroundColor: const MaterialStatePropertyAll(Colors.white),
-                        textStyle: const MaterialStatePropertyAll(
-                          TextStyle(
-                            fontSize: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      onPressed: () {
-                        Get.find<TicketController>().addTicketByUrl();
-                        Navigator.pop(context);
-                      },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 24),
-                        child: Text('Добавить'),
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                  ],
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          AppTextButton(
+            title: 'Добавить',
+            onPressed: () {
+              showModalBottomSheet(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                context: context,
+                builder: (context) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextFormField(
+                          controller: Get.find<TicketController>().urlController,
+                          onChanged: Get.find<TicketController>().onChangeUrl,
+                          decoration: InputDecoration(
+                            labelText: 'Введите url',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        GetX<TicketController>(builder: (controller) {
+                          return TextButton(
+                            style: ButtonStyle(
+                              shape: MaterialStatePropertyAll(
+                                RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(32),
+                                ),
+                              ),
+                              backgroundColor: MaterialStateProperty.resolveWith<Color?>(
+                                (Set<MaterialState> states) =>
+                                    states.contains(MaterialState.disabled)
+                                        ? Colors.grey
+                                        : const Color.fromRGBO(99, 81, 159, 1),
+                              ),
+                              foregroundColor: const MaterialStatePropertyAll(Colors.white),
+                              textStyle: const MaterialStatePropertyAll(
+                                TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            onPressed: controller.isAddingUrlCorrect.value
+                                ? () {
+                                    controller.addTicketByUrl();
+                                    Navigator.pop(context);
+                                  }
+                                : null,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 24),
+                              child: Text('Добавить'),
+                            ),
+                          );
+                        }),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
-        child: const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text('Добавить'),
-        ),
+          ),
+          const SizedBox(width: 16),
+          AppTextButton(
+            onPressed: () {
+              Get.find<TicketController>().downloadAllTickets();
+            },
+            title: 'Загрузить все',
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -101,6 +118,27 @@ class TicketStoragePage extends StatelessWidget {
             }
           },
         ),
+      ),
+    );
+  }
+}
+
+class AppTextButton extends StatelessWidget {
+  const AppTextButton({
+    super.key,
+    this.title,
+    required this.onPressed,
+  });
+  final String? title;
+  final Function() onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Text(title ?? ''),
       ),
     );
   }

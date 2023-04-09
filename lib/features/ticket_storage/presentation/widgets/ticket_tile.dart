@@ -27,31 +27,38 @@ class TicketTileWidget extends StatelessWidget {
           ),
           const SizedBox(width: 20),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  ticket.title ?? '',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.deepPurple),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 6,
-                  child: LinearProgressIndicator(
-                    value:
-                        controller.ticketList[ticketIndex].downloadStatus?.getDownloadProgress ?? 0,
-                    // value: controller.loadingProgress.value.toDouble(),
+            child: GestureDetector(
+              onTap: () {
+                controller.viewPdf(ticketIndex);
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ticket.title ?? '',
+                    style:
+                        Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.deepPurple),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  controller.ticketList[ticketIndex].downloadStatus?.getStatusTitle() ?? '',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(color: Colors.grey, fontSize: 14),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 6,
+                    child: LinearProgressIndicator(
+                      value:
+                          controller.ticketList[ticketIndex].downloadStatus?.getDownloadProgress ??
+                              0,
+                      // value: controller.loadingProgress.value.toDouble(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    controller.ticketList[ticketIndex].downloadStatus?.getStatusTitle() ?? '',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Colors.grey, fontSize: 14),
+                  ),
+                ],
+              ),
             ),
           ),
           IconButton(
